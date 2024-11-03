@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { View, StyleSheet } from 'react-native'
+import { View, StyleSheet, TouchableOpacity, Image, TextInput } from 'react-native'
 import { GiftedChat } from 'react-native-gifted-chat'
 import uuid from 'react-native-uuid'
+import { launchImageLibrary } from 'react-native-image-picker'
 import OpenAI from 'openai'
 import { OPENAI_API_KEY } from '@env'
 import Markdown from 'react-native-markdown-display';
+import logowatchdog from '../assets/images/logowatchdog.png'
 
 // const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
@@ -14,6 +16,7 @@ import Markdown from 'react-native-markdown-display';
 export function ChatScreen() {
   const [messages, setMessages] = useState([])
   const [isTyping, setIsTyping] = useState(false)
+  const [text, setText] = useState('')
 
   useEffect(() => {
     setMessages([
@@ -24,7 +27,7 @@ export function ChatScreen() {
         user: {
           _id: 2,
           name: 'React Native',
-          avatar: 'https://placeimg.com/140/140/any',
+          avatar: logowatchdog
         },
       },
     ])
@@ -49,7 +52,6 @@ export function ChatScreen() {
 //         user: {
 //           _id: 2,
 //           name: 'WatchDog Chat',
-//           avatar: 'https://placeimg.com/140/140/any',
 //         },
 //       };
   
@@ -65,6 +67,7 @@ export function ChatScreen() {
     setMessages(previousMessages =>
       GiftedChat.append(previousMessages, messages),
     )
+    setText('')
   }, [])
 
   const CustomMessageText = (props) => {
@@ -78,16 +81,55 @@ export function ChatScreen() {
           fontSize: 16,
           color: textColor,
         },
-        lineHeight: 20,
-        marginTop: 5,
-        marginBottom: 5,
-        marginLeft: 10,
-        marginRight: 10,
       }}>
         {currentMessage.text}
       </Markdown>
-    );
+    )
   }
+
+  const handleImagePick = () => {
+    launchImageLibrary({ mediaType: 'photo' }, (response) => {
+      if (response.didCancel || response.error) {
+        console.log('Seleção de imagem cancelada ou falhou');
+      } else {
+        const source = { uri: response.assets[0].uri };
+        const newMessage = {
+          _id: uuid.v4(),
+          createdAt: new Date(),
+          user: {
+            _id: 1,
+          },
+          image: source.uri,
+        };
+        setMessages(previousMessages => GiftedChat.append(previousMessages, [newMessage]));
+      }
+    });
+  };
+
+  const renderInputToolbar = () => (
+    <View style={styles.inputContainer}>
+      <TextInput
+        style={styles.textInput}
+        placeholder="Digite uma mensagem..."
+        value={text}
+        onChangeText={setText}
+      />
+      {text.length > 0 && (
+        <TouchableOpacity onPress={() => onSend([{ text, _id: uuid.v4(), createdAt: new Date(), user: { _id: 1 } }])} style={styles.sendButton}>
+          <Image
+            source={{ uri: 'https://img.icons8.com/ios-glyphs/30/000000/filled-sent.png' }}
+            style={styles.icon}
+          />
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity onPress={handleImagePick} style={styles.imageButton}>
+        <Image
+          source={{ uri: 'https://img.icons8.com/ios-glyphs/30/000000/gallery.png' }}
+          style={styles.icon}
+        />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -98,6 +140,7 @@ export function ChatScreen() {
           _id: 1,
         }}
         renderMessageText={CustomMessageText}
+        renderInputToolbar={renderInputToolbar}
         isTyping={isTyping}
       />
     </View>
@@ -105,10 +148,39 @@ export function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#000000',
-    },
-  });
+  container: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#fff',
+  },
+  textInput: {
+    flex: 1,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    outlineStyle: 'none',
+  },
+  sendButton: {
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageButton: {
+    marginLeft: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  icon: {
+    width: 30,
+    height: 30,
+  },
+});
 
 export default ChatScreen;
